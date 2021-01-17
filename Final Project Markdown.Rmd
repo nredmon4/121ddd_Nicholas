@@ -1,0 +1,154 @@
+---
+title: "Dirty Data Final Project"
+author: "Nicholas Redmond"
+date: "1/16/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## COVID-19 Mortality Across Nine Different Countries
+
+I retrieved this data from https://ourworldindata.org/coronavirus-source-data
+
+### Motivation
+Some questions this projects aim to answer is how COVID-19 spreads among populations among different countries of different development statuses and with different gross domestic products, life expectancies, and median ages. The goal of this analysis is to find a correlation among spread in wealthy, well-developed countries versus poorer countries and to try and find a correlation with deaths among generally older populations versus generally younger populations, as there are multiple claims the COVID-19 is deadlier for elderly populations.
+ 
+ 
+```{r, include=FALSE}
+##load packages
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+library(pander)
+
+##read in the COVID-19 dataset to the environment
+covid.data <- read.csv("C:\\Users\\nicho\\OneDrive\\Desktop\\DDD-I21\\owid-covid-data.csv")
+
+##check the names of columns and rows
+colnames(covid.data)
+rownames(covid.data)
+
+##remove columns not of interest
+covid.data.of.interest <- subset(covid.data, select = -c(handwashing_facilities,
+                                                        male_smokers,
+                                                        female_smokers,
+                                                        diabetes_prevalence,
+                                                        cardiovasc_death_rate,
+                                                        stringency_index,
+                                                        new_vaccinations_per_million,
+                                                        total_vaccinations_per_hundred,
+                                                        new_vaccinations,
+                                                        total_vaccinations,
+                                                        tests_units,
+                                                        tests_per_case,
+                                                        new_tests_smoothed_per_thousand,
+                                                        new_tests_smoothed,
+                                                        new_tests_per_thousand,
+                                                        total_tests,
+                                                        new_tests,
+                                                        weekly_hosp_admissions_per_million,
+                                                        weekly_hosp_admissions,
+                                                        weekly_icu_admissions_per_million,
+                                                        weekly_icu_admissions,
+                                                        hosp_patients_per_million,
+                                                        hosp_patients,
+                                                        icu_patients_per_million,
+                                                        icu_patients,
+                                                        new_deaths_smoothed_per_million,
+                                                        new_cases_smoothed_per_million,
+                                                        new_deaths_smoothed,
+                                                        new_cases_smoothed,
+                                                        reproduction_rate,
+                                                        total_tests_per_thousand,
+                                                        positive_rate,
+                                                        extreme_poverty))
+
+##select countries to be used for analysis
+selected.countries <- c("Afghanistan",
+                        "Argentina", 
+                        "Australia", 
+                        "Brazil",
+                        "China", 
+                        "Mexico",
+                        "Nigeria",
+                        "South Africa",
+                        "United States")
+```
+```{r, echo=FALSE}
+##combine the selected columns with the seletced countries to create the final dataframe
+final.covid.data <- dplyr::filter(covid.data.of.interest, location %in% selected.countries)
+
+##replace all NA values with 0 values
+final.covid.data[is.na(final.covid.data)] = 0
+
+##change character date to date
+final.covid.data$date <- as.Date(final.covid.data$date)
+```
+### Coding
+With this data, any columns with inexplicable missing data were removed from the dataframe. There were 33 columns with inexplicable missing data, so out of 54 variables, 21 of them were retained for the analysis. There was a lot of missing data in the early dates for each country, but those missing values were from before the country started tracking Coronavirus cases, so I recoded them to be 0 using: final.covid.data[is.na(final.covid.data)] = 0
+
+### Analysis
+My first table compares latest total case count per million people to population density.
+```{r echo=FALSE}
+##create table comparing total cases per million to population density
+pander(final.covid.data[c(317,668,1015,1331,1682,2054,2368,2703,3054),c(9,14)],style = "rmarkdown")
+```
+However, this correlation (or lack thereof) would best be represented in a plot
+
+```{r echo=FALSE}
+pop.dens <- final.covid.data[c(317,668,1015,1331,1682,2054,2368,2703,3054),c(9,14)]
+```
+
+```{r echo=FALSE}
+ggplot(data = pop.dens, aes(x = population_density, y=total_cases_per_million)) + 
+  geom_point()
+
+```
+
+It appears there may be a slight correlation between lower population density and higher case count per million.
+
+Next, we look at how each country tracked their case counts over the duration of the pandemic so far.
+
+```{r,include=FALSE}
+tracking <- final.covid.data[,c(3,4,9)]
+```
+
+```{r,echo=FALSE}
+ggplot(data = tracking, aes(x = date, y = total_cases_per_million, color = location))+
+  geom_line()
+```
+
+It appears that some countries either slowed the pandemic's spread very quickly, or did not track the virus very well, the latter of which is more plausible.
+
+We now look at markers of development versus total deaths and cases.
+
+```{r,include=FALSE}
+big.chart <- final.covid.data[c(317,668,1015,1331,1682,2054,2368,2703,3054),c(3,5,7,21,20,18)]
+```
+
+```{r,echo=FALSE}
+pander(big.chart, style = "rmarkdown")
+```
+
+A country that is an outlier that most likely tracked cases well is Australia. Most recently, they had only recorded 909 deaths, which indicates an exceptional job at controlling COVID-19.
+
+Finally, we look at the correlation between median age and total most recent death count per million people.
+
+```{r,include=FALSE}
+med.Age <- final.covid.data[c(317,668,1015,1331,1682,2054,2368,2703,3054),c(11,15)]
+```
+
+```{r,echo=FALSE}
+ggplot(data = med.Age, aes(x = median_age, y = total_deaths_per_million)) +
+  geom_point()
+```
+
+It appears that there is a general correlation between death count per million people and median age.
+
+### Conclusion
+In conclusion, analysis is extremely difficult on this dataset regarding the massive discrepancies between national governments' tracking of COVID-19 cases. It appears that in general, well developed countries with high life expectancies, median ages, and gdp per capita have had better responses to the pandemic, and therefore lower case counts and death counts. A noteable outlier is the United States, that has the highest case count and death count in the world, despite being one of the most well-developed countries. However, no solid conclusions can be made due to massive discrepencies between data collection in different countries
